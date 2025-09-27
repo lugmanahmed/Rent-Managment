@@ -1,91 +1,41 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const currencySchema = new mongoose.Schema({
+const Currency = sequelize.define('Currency', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
   code: {
-    type: String,
-    required: true,
-    trim: true,
-    unique: true,
-    uppercase: true,
-    maxlength: 3,
-    minlength: 3
+    type: DataTypes.STRING(3),
+    allowNull: false,
+    unique: true
   },
   name: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 100
+    type: DataTypes.STRING,
+    allowNull: false
   },
   symbol: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 10
+    type: DataTypes.STRING(10),
+    allowNull: true
   },
-  sortOrder: {
-    type: Number,
-    required: true,
-    min: 0,
-    default: 0
-  },
-  isActive: {
-    type: Boolean,
-    default: true
+  exchangeRate: {
+    type: DataTypes.DECIMAL(10, 4),
+    allowNull: true,
+    defaultValue: 1.0000
   },
   isDefault: {
-    type: Boolean,
-    default: false
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   },
-  decimalPlaces: {
-    type: Number,
-    default: 2,
-    min: 0,
-    max: 4
-  },
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+  isActive: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
   }
 }, {
+  tableName: 'currencies',
   timestamps: true
 });
 
-// Index for better query performance
-currencySchema.index({ sortOrder: 1 });
-currencySchema.index({ code: 1 });
-currencySchema.index({ isActive: 1 });
-currencySchema.index({ isDefault: 1 });
-
-// Virtual for display name
-currencySchema.virtual('displayName').get(function() {
-  return `${this.name} (${this.code})`;
-});
-
-// Pre-save middleware to ensure unique sort order and only one default currency
-currencySchema.pre('save', async function(next) {
-  if (this.isNew || this.isModified('sortOrder')) {
-    // Check if another currency has the same sort order
-    const existing = await this.constructor.findOne({
-      sortOrder: this.sortOrder,
-      _id: { $ne: this._id }
-    });
-    
-    if (existing) {
-      // Increment sort order for the new item
-      this.sortOrder = await this.constructor.countDocuments() + 1;
-    }
-  }
-
-  // Ensure only one default currency
-  if (this.isDefault) {
-    await this.constructor.updateMany(
-      { _id: { $ne: this._id } },
-      { isDefault: false }
-    );
-  }
-
-  next();
-});
-
-module.exports = mongoose.model('Currency', currencySchema);
+module.exports = Currency;

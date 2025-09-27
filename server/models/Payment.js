@@ -1,75 +1,94 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const paymentSchema = new mongoose.Schema({
-  tenant: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Tenant',
-    required: true
+const Payment = sequelize.define('Payment', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
   },
-  property: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Property',
-    required: true
+  tenantId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'tenants',
+      key: 'id'
+    }
+  },
+  rentalUnitId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'rental_units',
+      key: 'id'
+    }
   },
   amount: {
-    type: Number,
-    required: true,
-    min: 0
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false,
+    validate: {
+      min: 0
+    }
+  },
+  currency: {
+    type: DataTypes.STRING,
+    defaultValue: 'MVR'
+  },
+  paymentTypeId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'payment_types',
+      key: 'id'
+    }
+  },
+  paymentModeId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'payment_modes',
+      key: 'id'
+    }
+  },
+  paymentDate: {
+    type: DataTypes.DATE,
+    allowNull: false
   },
   dueDate: {
-    type: Date,
-    required: true
-  },
-  paidDate: {
-    type: Date
+    type: DataTypes.DATE,
+    allowNull: false
   },
   status: {
-    type: String,
-    enum: ['pending', 'paid', 'overdue', 'partial', 'cancelled'],
-    default: 'pending'
-  },
-  paymentMethod: {
-    type: String,
-    enum: ['bank_transfer', 'cash', 'check', 'online', 'other'],
-    required: true
+    type: DataTypes.ENUM('pending', 'paid', 'overdue', 'cancelled'),
+    defaultValue: 'pending'
   },
   reference: {
-    type: String, // Transaction reference, check number, etc.
-    trim: true
+    type: DataTypes.STRING,
+    allowNull: true
   },
   notes: {
-    type: String,
-    trim: true
+    type: DataTypes.TEXT,
+    allowNull: true
   },
-  lateFee: {
-    amount: { type: Number, default: 0 },
-    appliedDate: { type: Date }
+  receiptNumber: {
+    type: DataTypes.STRING,
+    allowNull: true
   },
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+  receiptPath: {
+    type: DataTypes.STRING,
+    allowNull: true
   },
-  attachments: [{
-    url: { type: String, required: true },
-    name: { type: String, required: true },
-    type: { type: String } // receipt, check_image, etc.
-  }]
+  createdById: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'users',
+      key: 'id'
+    }
+  }
 }, {
+  tableName: 'payments',
   timestamps: true
 });
 
-// Virtual for days overdue
-paymentSchema.virtual('daysOverdue').get(function() {
-  if (this.status !== 'overdue') return 0;
-  const now = new Date();
-  const diffTime = now - this.dueDate;
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-});
-
-// Index for efficient queries
-paymentSchema.index({ tenant: 1, dueDate: -1 });
-paymentSchema.index({ property: 1, dueDate: -1 });
-paymentSchema.index({ status: 1, dueDate: 1 });
-
-module.exports = mongoose.model('Payment', paymentSchema);
+module.exports = Payment;

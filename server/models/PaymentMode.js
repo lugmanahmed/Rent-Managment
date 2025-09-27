@@ -1,53 +1,28 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const paymentModeSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-    unique: true,
-    maxlength: 100
+const PaymentMode = sequelize.define('PaymentMode', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
   },
-  sortOrder: {
-    type: Number,
-    required: true,
-    min: 0,
-    default: 0
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true
+  },
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: true
   },
   isActive: {
-    type: Boolean,
-    default: true
-  },
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
   }
 }, {
+  tableName: 'payment_modes',
   timestamps: true
 });
 
-// Index for better query performance
-paymentModeSchema.index({ sortOrder: 1 });
-paymentModeSchema.index({ name: 1 });
-paymentModeSchema.index({ isActive: 1 });
-
-// Pre-save middleware to ensure unique sort order
-paymentModeSchema.pre('save', async function(next) {
-  if (this.isNew || this.isModified('sortOrder')) {
-    // Check if another payment mode has the same sort order
-    const existing = await this.constructor.findOne({
-      sortOrder: this.sortOrder,
-      _id: { $ne: this._id }
-    });
-    
-    if (existing) {
-      // Increment sort order for the new item
-      this.sortOrder = await this.constructor.countDocuments() + 1;
-    }
-  }
-
-  next();
-});
-
-module.exports = mongoose.model('PaymentMode', paymentModeSchema);
+module.exports = PaymentMode;

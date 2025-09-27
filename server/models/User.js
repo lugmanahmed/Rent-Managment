@@ -1,110 +1,123 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
 const bcrypt = require('bcryptjs');
+const { sequelize } = require('../config/database');
 
-const userSchema = new mongoose.Schema({
+const User = sequelize.define('User', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
   name: {
-    type: String,
-    required: true,
+    type: DataTypes.STRING,
+    allowNull: false,
     trim: true
   },
   email: {
-    type: String,
-    required: true,
+    type: DataTypes.STRING,
+    allowNull: false,
     unique: true,
-    lowercase: true,
-    trim: true
+    validate: {
+      isEmail: true
+    }
   },
   mobile: {
-    type: String,
-    trim: true
+    type: DataTypes.STRING,
+    allowNull: true
   },
   idCardNumber: {
-    type: String,
-    trim: true
+    type: DataTypes.STRING,
+    allowNull: true
   },
   password: {
-    type: String,
-    required: true,
-    minlength: 6
+    type: DataTypes.STRING,
+    allowNull: false,
+    validate: {
+      len: [6, 255]
+    }
   },
-  role: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Role',
-    required: true
+  roleId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'roles',
+      key: 'id'
+    }
   },
-  // Keep legacy role field for backward compatibility
   legacyRole: {
-    type: String,
-    enum: ['admin', 'property_manager', 'accountant'],
-    default: 'property_manager'
+    type: DataTypes.ENUM('admin', 'property_manager', 'accountant'),
+    defaultValue: 'property_manager'
   },
-  assignedProperties: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Property'
-  }],
   isActive: {
-    type: Boolean,
-    default: true
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
   },
   lastLogin: {
-    type: Date
+    type: DataTypes.DATE,
+    allowNull: true
   },
   lastLogout: {
-    type: Date
+    type: DataTypes.DATE,
+    allowNull: true
   },
   isOnline: {
-    type: Boolean,
-    default: false
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   },
   sessionToken: {
-    type: String
+    type: DataTypes.STRING,
+    allowNull: true
   },
   sessionExpires: {
-    type: Date
+    type: DataTypes.DATE,
+    allowNull: true
   },
   loginAttempts: {
-    type: Number,
-    default: 0
+    type: DataTypes.INTEGER,
+    defaultValue: 0
   },
   lockUntil: {
-    type: Date
+    type: DataTypes.DATE,
+    allowNull: true
   },
   avatar: {
-    type: String
+    type: DataTypes.STRING,
+    allowNull: true
   }
 }, {
-  timestamps: true
-});
-
-// Hash password before saving
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
+  tableName: 'users',
+  timestamps: true,
+  hooks: {
+    beforeCreate: async (user) => {
+      if (user.password) {
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(user.password, salt);
+      }
+    },
+    beforeUpdate: async (user) => {
+      if (user.changed('password')) {
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(user.password, salt);
+      }
+    }
   }
 });
 
-// Compare password method
-userSchema.methods.comparePassword = async function(candidatePassword) {
+// Instance methods
+User.prototype.comparePassword = async function(candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Remove password from JSON output
-userSchema.methods.toJSON = function() {
-  const user = this.toObject();
+User.prototype.toJSON = function() {
+  const user = this.toObject ? this.toObject() : this.get();
   delete user.password;
   delete user.sessionToken;
   return user;
 };
 
-// Session management methods
-userSchema.methods.createSession = function() {
-  const sessionToken = require('crypto').randomBytes(32).toString('hex');
+User.prototype.createSession = function() {
+  const crypto = require('crypto');
+  const sessionToken = crypto.randomBytes(32).toString('hex');
   const sessionExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
   
   this.sessionToken = sessionToken;
@@ -115,47 +128,51 @@ userSchema.methods.createSession = function() {
   return sessionToken;
 };
 
-userSchema.methods.endSession = function() {
-  this.sessionToken = undefined;
-  this.sessionExpires = undefined;
+User.prototype.endSession = function() {
+  this.sessionToken = null;
+  this.sessionExpires = null;
   this.isOnline = false;
   this.lastLogout = new Date();
 };
 
-userSchema.methods.isSessionValid = function() {
+User.prototype.isSessionValid = function() {
   return this.sessionToken && 
          this.sessionExpires && 
          this.sessionExpires > new Date() &&
          this.isOnline;
 };
 
-userSchema.methods.incrementLoginAttempts = function() {
+User.prototype.incrementLoginAttempts = async function() {
   // If we have a previous lock that has expired, restart at 1
   if (this.lockUntil && this.lockUntil < Date.now()) {
-    return this.updateOne({
-      $unset: { lockUntil: 1 },
-      $set: { loginAttempts: 1 }
+    return this.update({
+      lockUntil: null,
+      loginAttempts: 1
     });
   }
   
-  const updates = { $inc: { loginAttempts: 1 } };
+  const updates = { loginAttempts: this.loginAttempts + 1 };
   
   // Lock account after 5 failed attempts for 2 hours
   if (this.loginAttempts + 1 >= 5 && !this.isLocked) {
-    updates.$set = { lockUntil: Date.now() + 2 * 60 * 60 * 1000 }; // 2 hours
+    updates.lockUntil = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours
   }
   
-  return this.updateOne(updates);
+  return this.update(updates);
 };
 
-userSchema.methods.resetLoginAttempts = function() {
-  return this.updateOne({
-    $unset: { loginAttempts: 1, lockUntil: 1 }
+User.prototype.resetLoginAttempts = function() {
+  return this.update({
+    loginAttempts: 0,
+    lockUntil: null
   });
 };
 
-userSchema.virtual('isLocked').get(function() {
-  return !!(this.lockUntil && this.lockUntil > Date.now());
+// Virtual getter for isLocked
+Object.defineProperty(User.prototype, 'isLocked', {
+  get: function() {
+    return !!(this.lockUntil && this.lockUntil > new Date());
+  }
 });
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = User;

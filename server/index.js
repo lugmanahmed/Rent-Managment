@@ -1,8 +1,8 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const { sequelize, testConnection } = require('./config/database');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
@@ -61,15 +61,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Database connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/rent-management', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('MongoDB connected successfully'))
-.catch(err => {
-  console.error('MongoDB connection error:', err);
-  console.log('⚠️  Running without database - some features may not work');
-});
+testConnection();
 
 // Routes
 app.use('/api/auth', authRoutes);

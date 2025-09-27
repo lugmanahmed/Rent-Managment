@@ -1,69 +1,120 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const propertySchema = new mongoose.Schema({
+const Property = sequelize.define('Property', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
   name: {
-    type: String,
-    required: true,
-    trim: true
+    type: DataTypes.STRING,
+    allowNull: false
   },
   type: {
-    type: String,
-    enum: ['house', 'apartment', 'commercial'],
-    required: true
+    type: DataTypes.ENUM('house', 'apartment', 'commercial'),
+    allowNull: false
   },
-  address: {
-    street: { type: String, required: true },
-    city: { type: String, required: true },
-    island: { type: String, required: true },
-    postalCode: { type: String },
-    country: { type: String, default: 'Maldives' }
+  // Address fields
+  street: {
+    type: DataTypes.STRING,
+    allowNull: false
   },
-  buildingDetails: {
-    numberOfFloors: { type: Number, required: true, min: 1 },
-    numberOfRentalUnits: { type: Number, required: true, min: 1 }
+  city: {
+    type: DataTypes.STRING,
+    allowNull: false
   },
-  details: {
-    bedrooms: { type: Number, min: 0 },
-    bathrooms: { type: Number, min: 0 },
-    squareFeet: { type: Number, min: 0 },
-    yearBuilt: { type: Number },
-    description: { type: String }
+  island: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  postalCode: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  country: {
+    type: DataTypes.STRING,
+    defaultValue: 'Maldives'
+  },
+  // Building details
+  numberOfFloors: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    validate: {
+      min: 1
+    }
+  },
+  numberOfRentalUnits: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    validate: {
+      min: 1
+    }
+  },
+  // Property details
+  bedrooms: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    validate: {
+      min: 0
+    }
+  },
+  bathrooms: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    validate: {
+      min: 0
+    }
+  },
+  squareFeet: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    validate: {
+      min: 0
+    }
+  },
+  yearBuilt: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: true
   },
   status: {
-    type: String,
-    enum: ['occupied', 'vacant', 'maintenance', 'renovation'],
-    default: 'vacant'
+    type: DataTypes.ENUM('occupied', 'vacant', 'maintenance', 'renovation'),
+    defaultValue: 'vacant'
   },
-  photos: [{
-    url: { type: String, required: true },
-    caption: { type: String },
-    isPrimary: { type: Boolean, default: false }
-  }],
-  amenities: [{
-    type: String
-  }],
-  assignedManager: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+  photos: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: []
+  },
+  amenities: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: []
+  },
+  assignedManagerId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'users',
+      key: 'id'
+    }
   },
   isActive: {
-    type: Boolean,
-    default: true
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
   }
 }, {
+  tableName: 'properties',
   timestamps: true
 });
 
 // Virtual for full address
-propertySchema.virtual('fullAddress').get(function() {
-  return `${this.address.street}, ${this.address.city}, ${this.address.island}`;
-});
+Property.prototype.getFullAddress = function() {
+  return `${this.street}, ${this.city}, ${this.island}`;
+};
 
-// Index for search functionality
-propertySchema.index({ 
-  name: 'text', 
-  'address.street': 'text', 
-  'address.city': 'text' 
-});
-
-module.exports = mongoose.model('Property', propertySchema);
+module.exports = Property;

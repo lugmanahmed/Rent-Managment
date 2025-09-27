@@ -1,207 +1,175 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const tenantSchema = new mongoose.Schema({
+const Tenant = sequelize.define('Tenant', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
   // Personal Information
   firstName: {
-    type: String,
-    required: true,
-    trim: true
+    type: DataTypes.STRING,
+    allowNull: false
   },
   lastName: {
-    type: String,
-    required: true,
-    trim: true
+    type: DataTypes.STRING,
+    allowNull: false
   },
   email: {
-    type: String,
-    required: true,
+    type: DataTypes.STRING,
+    allowNull: false,
     unique: true,
-    lowercase: true,
-    trim: true
+    validate: {
+      isEmail: true
+    }
   },
   phone: {
-    type: String,
-    required: true,
-    trim: true
+    type: DataTypes.STRING,
+    allowNull: false
   },
   idType: {
-    type: String,
-    enum: ['passport', 'national_id'],
-    required: true
+    type: DataTypes.ENUM('passport', 'national_id'),
+    allowNull: false
   },
   idNumber: {
-    type: String,
-    required: true,
-    trim: true
+    type: DataTypes.STRING,
+    allowNull: false
   },
   dateOfBirth: {
-    type: Date
+    type: DataTypes.DATE,
+    allowNull: true
   },
   nationality: {
-    type: String,
-    default: 'Maldives'
+    type: DataTypes.STRING,
+    defaultValue: 'Maldives'
   },
-
-  // Rental Units (one tenant can rent multiple units)
-  rentalUnits: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'RentalUnit'
-  }],
-
   // Lease Information
-  leaseInfo: {
-    startDate: {
-      type: Date,
-      required: true
-    },
-    endDate: {
-      type: Date,
-      required: true
-    },
-    monthlyRent: {
-      type: Number,
-      required: true,
+  leaseStartDate: {
+    type: DataTypes.DATE,
+    allowNull: false
+  },
+  leaseEndDate: {
+    type: DataTypes.DATE,
+    allowNull: false
+  },
+  monthlyRent: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false,
+    validate: {
       min: 0
-    },
-    currency: {
-      type: String,
-      default: 'MVR'
-    },
-    securityDeposit: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
-    agreementAttachment: {
-      fileName: String,
-      filePath: String,
-      uploadedAt: {
-        type: Date,
-        default: Date.now
-      }
     }
   },
-
+  currency: {
+    type: DataTypes.STRING,
+    defaultValue: 'MVR'
+  },
+  securityDeposit: {
+    type: DataTypes.DECIMAL(10, 2),
+    defaultValue: 0,
+    validate: {
+      min: 0
+    }
+  },
+  agreementFileName: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  agreementFilePath: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  agreementUploadedAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
   // Emergency Contact
-  emergencyContact: {
-    name: {
-      type: String,
-      trim: true
-    },
-    relationship: {
-      type: String,
-      trim: true
-    },
-    phone: {
-      type: String,
-      trim: true
-    },
-    email: {
-      type: String,
-      trim: true,
-      lowercase: true
+  emergencyContactName: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  emergencyContactRelationship: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  emergencyContactPhone: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  emergencyContactEmail: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    validate: {
+      isEmail: true
     }
   },
-
   // Status and Notes
   status: {
-    type: String,
-    enum: ['active', 'inactive', 'terminated', 'pending'],
-    default: 'pending'
+    type: DataTypes.ENUM('active', 'inactive', 'terminated', 'pending'),
+    defaultValue: 'pending'
   },
-  notes: [{
-    text: {
-      type: String,
-      required: true
-    },
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now
-    }
-  }],
-
+  notes: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: []
+  },
   // Additional Information
   occupation: {
-    type: String,
-    trim: true
+    type: DataTypes.STRING,
+    allowNull: true
   },
   employer: {
-    type: String,
-    trim: true
+    type: DataTypes.STRING,
+    allowNull: true
   },
   employerContact: {
-    type: String,
-    trim: true
+    type: DataTypes.STRING,
+    allowNull: true
   },
-  pets: [{
-    type: {
-      type: String,
-      enum: ['dog', 'cat', 'bird', 'other']
-    },
-    name: String,
-    breed: String,
-    size: {
-      type: String,
-      enum: ['small', 'medium', 'large']
-    }
-  }],
-
-  // Documents
-  documents: [{
-    type: {
-      type: String,
-      enum: ['id_copy', 'employment_letter', 'bank_statement', 'lease_agreement', 'other']
-    },
-    name: String,
-    filePath: String,
-    uploadedAt: {
-      type: Date,
-      default: Date.now
-    }
-  }],
-
+  pets: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: []
+  },
+  documents: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: []
+  },
   // System Fields
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+  createdById: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'users',
+      key: 'id'
+    }
   },
-  assignedManager: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+  assignedManagerId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'users',
+      key: 'id'
+    }
   }
 }, {
+  tableName: 'tenants',
   timestamps: true
 });
 
 // Virtual for full name
-tenantSchema.virtual('fullName').get(function() {
+Tenant.prototype.getFullName = function() {
   return `${this.firstName} ${this.lastName}`;
-});
+};
 
 // Virtual for lease duration in months
-tenantSchema.virtual('leaseDuration').get(function() {
-  if (this.leaseInfo.startDate && this.leaseInfo.endDate) {
-    const diffTime = Math.abs(this.leaseInfo.endDate - this.leaseInfo.startDate);
+Tenant.prototype.getLeaseDuration = function() {
+  if (this.leaseStartDate && this.leaseEndDate) {
+    const diffTime = Math.abs(new Date(this.leaseEndDate) - new Date(this.leaseStartDate));
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 30));
   }
   return 0;
-});
+};
 
-// Index for search
-tenantSchema.index({
-  'firstName': 'text',
-  'lastName': 'text',
-  'email': 'text',
-  'phone': 'text'
-});
-
-// Index for property and status
-tenantSchema.index({ property: 1, status: 1 });
-
-module.exports = mongoose.model('Tenant', tenantSchema);
+module.exports = Tenant;
