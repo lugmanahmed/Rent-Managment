@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/UI/Card';
 import { Button } from '../../../components/UI/Button';
 import { Input } from '../../../components/UI/Input';
@@ -33,7 +33,7 @@ interface RentalUnit {
   };
 }
 
-export default function NewRentalUnitPage() {
+function NewRentalUnitPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const propertyIdFromUrl = searchParams.get('property');
@@ -175,15 +175,20 @@ export default function NewRentalUnitPage() {
       toast.success('Rental unit created successfully');
       
       router.push('/rental-units');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error creating rental unit:', error);
       
-      if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        const errorMessages = Object.values(errors).flat();
-        toast.error('Validation failed: ' + errorMessages.join(', '));
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } };
+        if (axiosError.response?.data?.errors) {
+          const errors = axiosError.response.data.errors;
+          const errorMessages = Object.values(errors).flat();
+          toast.error('Validation failed: ' + errorMessages.join(', '));
+        } else {
+          toast.error('Failed to create rental unit: ' + (axiosError.response?.data?.message || 'Unknown error'));
+        }
       } else {
-        toast.error('Failed to create rental unit: ' + (error.response?.data?.message || error.message));
+        toast.error('Failed to create rental unit: Unknown error');
       }
     } finally {
       setLoading(false);
@@ -529,5 +534,13 @@ export default function NewRentalUnitPage() {
         </Card>
       </div>
     </SidebarLayout>
+  );
+}
+
+export default function NewRentalUnitPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <NewRentalUnitPageContent />
+    </Suspense>
   );
 }

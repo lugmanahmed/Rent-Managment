@@ -60,7 +60,7 @@ export default function NewTenantPage() {
     },
     status: 'active',
     notes: '',
-    rental_unit_ids: []
+    rental_unit_ids: [] as string[]
   });
 
   useEffect(() => {
@@ -84,7 +84,7 @@ export default function NewTenantPage() {
     setFormData(prev => ({
       ...prev,
       [section]: {
-        ...prev[section as keyof typeof prev],
+        ...(prev[section as keyof typeof prev] as Record<string, unknown> || {}),
         [field]: value
       }
     }));
@@ -117,9 +117,12 @@ export default function NewTenantPage() {
             move_in_date: new Date().toISOString().split('T')[0]
           });
           assignmentResults.push({ unitId, success: true });
-        } catch (unitError: any) {
+        } catch (unitError: unknown) {
           console.error(`Error assigning tenant to rental unit ${unitId}:`, unitError);
-          assignmentResults.push({ unitId, success: false, error: unitError.message });
+          const errorMessage = unitError && typeof unitError === 'object' && 'message' in unitError 
+            ? (unitError as { message: string }).message 
+            : 'Unknown error';
+          assignmentResults.push({ unitId, success: false, error: errorMessage });
         }
       }
       
@@ -135,15 +138,21 @@ export default function NewTenantPage() {
       }
       
       router.push('/tenants');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating tenant:', error);
       
-      if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        const errorMessages = Object.values(errors).flat();
-        toast.error('Validation failed: ' + errorMessages.join(', '));
+      if (error && typeof error === 'object' && 'response' in error) {
+        const errorResponse = error as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } };
+        if (errorResponse.response?.data?.errors) {
+          const errors = errorResponse.response.data.errors;
+          const errorMessages = Object.values(errors).flat();
+          toast.error('Validation failed: ' + errorMessages.join(', '));
+        } else {
+          const errorMessage = errorResponse.response?.data?.message || 'Unknown error';
+          toast.error('Failed to create tenant: ' + errorMessage);
+        }
       } else {
-        toast.error('Failed to create tenant: ' + (error.response?.data?.message || error.message));
+        toast.error('Failed to create tenant');
       }
     } finally {
       setLoading(false);

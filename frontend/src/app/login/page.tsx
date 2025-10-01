@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../../components/UI/Button';
@@ -13,7 +12,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
-  const router = useRouter();
   
   const { register, handleSubmit, formState: { errors } } = useForm<{ email: string; password: string }>();
 

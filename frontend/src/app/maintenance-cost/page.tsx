@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/UI/Card';
 import { Button } from '../../components/UI/Button';
-import { DollarSign, FileText, Calendar, User, RefreshCw, Plus, Eye, Edit, Trash2 } from 'lucide-react';
+import { DollarSign, FileText, RefreshCw, Plus, Eye, Edit, Trash2 } from 'lucide-react';
 import { maintenanceCostsAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 import SidebarLayout from '../../components/Layout/SidebarLayout';
@@ -43,8 +43,6 @@ interface MaintenanceCost {
 export default function MaintenanceCostPage() {
   const [maintenanceCosts, setMaintenanceCosts] = useState<MaintenanceCost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [selectedAsset, setSelectedAsset] = useState<any>(null);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingCost, setEditingCost] = useState<MaintenanceCost | null>(null);
   const [editForm, setEditForm] = useState({
@@ -176,13 +174,6 @@ export default function MaintenanceCostPage() {
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
-            </Button>
-            <Button 
-              onClick={() => setShowAddForm(true)}
-              className="flex items-center"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Cost
             </Button>
           </div>
         </div>

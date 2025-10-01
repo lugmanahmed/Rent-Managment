@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/UI/Card';
-import { Button } from '../../components/UI/Button';
-import { Input } from '../../components/UI/Input';
-import { Select } from '../../components/UI/Select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/UI/Card';
+import { Button } from '@/components/UI/Button';
+import { Input } from '@/components/UI/Input';
+import { Select } from '@/components/UI/Select';
 import { FileText, Calendar, Users, DollarSign, AlertCircle, CheckCircle, Clock } from 'lucide-react';
-import { rentInvoicesAPI, rentalUnitsAPI } from '../../services/api';
+import { rentInvoicesAPI, rentalUnitsAPI } from '@/services/api';
 import toast from 'react-hot-toast';
-import SidebarLayout from '../../components/Layout/SidebarLayout';
+import SidebarLayout from '@/components/Layout/SidebarLayout';
 
 interface RentalUnit {
   id: number;
@@ -34,7 +34,7 @@ interface RentalUnit {
 
 interface GenerationResult {
   generated_count: number;
-  invoices: any[];
+  invoices: Record<string, unknown>[];
   errors: string[];
 }
 
@@ -90,9 +90,12 @@ export default function MonthlyRentPage() {
         toast.error(`${response.data.errors.length} invoices could not be generated`);
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error generating invoices:', error);
-      toast.error(error.response?.data?.message || 'Failed to generate rent invoices');
+      const errorMessage = error && typeof error === 'object' && 'response' in error 
+        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message 
+        : 'Failed to generate rent invoices';
+      toast.error(errorMessage || 'Failed to generate rent invoices');
     } finally {
       setGenerating(false);
     }
@@ -301,12 +304,20 @@ export default function MonthlyRentPage() {
                   <div className="bg-green-50 border border-green-200 rounded-md p-3">
                     <h4 className="text-sm font-medium text-green-800 mb-2">Generated Invoices:</h4>
                     <div className="space-y-2">
-                      {generationResult.invoices.map((invoice) => (
-                        <div key={invoice.id} className="text-sm text-green-700">
-                          • {invoice.invoice_number} - {invoice.tenant.personal_info.firstName} {invoice.tenant.personal_info.lastName} 
-                          ({invoice.property.name} - Unit {invoice.rental_unit.unit_number}) - {formatCurrency(invoice.total_amount, invoice.currency)}
-                        </div>
-                      ))}
+                      {generationResult.invoices.map((invoice, index) => {
+                        const invoiceData = invoice as Record<string, unknown>;
+                        const tenant = invoiceData.tenant as Record<string, unknown>;
+                        const personalInfo = tenant?.personal_info as Record<string, unknown>;
+                        const property = invoiceData.property as Record<string, unknown>;
+                        const rentalUnit = invoiceData.rental_unit as Record<string, unknown>;
+                        
+                        return (
+                          <div key={index} className="text-sm text-green-700">
+                            • {String(invoiceData.invoice_number)} - {String(personalInfo?.firstName)} {String(personalInfo?.lastName)} 
+                            ({String(property?.name)} - Unit {String(rentalUnit?.unit_number)}) - {formatCurrency(invoiceData.total_amount as number, invoiceData.currency as string)}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

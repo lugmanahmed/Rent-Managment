@@ -42,12 +42,17 @@ export default function AssetsPage() {
       setLoading(true);
       const response = await assetsAPI.getAll();
       setAssets(response.data.assets || []);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error fetching assets:', error);
-      if (error.response?.status === 401) {
-        toast.error('Please log in to view assets');
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
+      if (error && typeof error === 'object' && 'response' in error) {
+        const errorResponse = error as { response?: { status?: number } };
+        if (errorResponse.response?.status === 401) {
+          toast.error('Please log in to view assets');
+          if (typeof window !== 'undefined') {
+            window.location.href = '/login';
+          }
+        } else {
+          toast.error('Failed to fetch assets');
         }
       } else {
         toast.error('Failed to fetch assets');
@@ -101,16 +106,22 @@ export default function AssetsPage() {
       setShowAddForm(false);
       setEditingAsset(null);
       fetchAssets();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error saving asset:', error);
       
       // Show specific validation errors if available
-      if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        const errorMessages = Object.values(errors).flat();
-        toast.error('Validation failed: ' + errorMessages.join(', '));
+      if (error && typeof error === 'object' && 'response' in error) {
+        const errorResponse = error as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } };
+        if (errorResponse.response?.data?.errors) {
+          const errors = errorResponse.response.data.errors;
+          const errorMessages = Object.values(errors).flat();
+          toast.error('Validation failed: ' + errorMessages.join(', '));
+        } else {
+          const errorMessage = errorResponse.response?.data?.message || 'Unknown error';
+          toast.error('Failed to save asset: ' + errorMessage);
+        }
       } else {
-        toast.error('Failed to save asset: ' + (error.response?.data?.message || error.message));
+        toast.error('Failed to save asset');
       }
     }
   };
@@ -133,7 +144,7 @@ export default function AssetsPage() {
       await assetsAPI.delete(id);
       toast.success('Asset deleted successfully');
       fetchAssets();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error deleting asset:', error);
       toast.error('Failed to delete asset');
     }

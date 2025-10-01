@@ -45,8 +45,16 @@ export default function MaintenancePage() {
   const [showCostForm, setShowCostForm] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [existingCostData, setExistingCostData] = useState<any>(null);
-  const [assetsWithCosts, setAssetsWithCosts] = useState<Set<number>>(new Set());
+  const [existingCostData, setExistingCostData] = useState<{
+    id: number;
+    repair_cost: number;
+    currency: string;
+    description: string;
+    repair_date: string;
+    repair_provider: string;
+    notes: string;
+    attached_bills: string[];
+  } | null>(null);
   const [costForm, setCostForm] = useState({
     repair_cost: '',
     currency: 'MVR',
@@ -96,7 +104,6 @@ export default function MaintenancePage() {
         }
       }
       console.log('Assets with costs:', Array.from(assetsWithCostsSet));
-      setAssetsWithCosts(assetsWithCostsSet);
       
       // Debug: Log the final state
       console.log('🔍 Final assetsWithCosts state:', Array.from(assetsWithCostsSet));
@@ -178,57 +185,13 @@ export default function MaintenancePage() {
         }, costForm.bills);
 
         toast.success('Maintenance cost recorded successfully');
-        handleCloseModal();
         fetchMaintenanceAssets(); // Refresh the maintenance assets list
+        handleCloseModal();
       }
-
-      // Update assetsWithCosts state
-      if (selectedAsset) {
-        setAssetsWithCosts(prev => new Set([...prev, selectedAsset.id]));
-      }
-      
-      // Reset form and close modal
-      handleCloseModal();
       
     } catch (error) {
       console.error('Error recording maintenance cost:', error);
       toast.error(`Failed to ${isEditing ? 'update' : 'record'} maintenance cost`);
-    }
-  };
-
-  const checkMaintenanceCostExists = async (asset: Asset): Promise<boolean> => {
-    try {
-      console.log('Checking maintenance cost for asset:', asset.id);
-      const response = await maintenanceCostsAPI.getByRentalUnitAsset(asset.id);
-      console.log('Full API response:', response);
-      console.log('Response data:', response.data);
-      
-      // More explicit checking
-      if (!response.data) {
-        console.log('No response data');
-        return false;
-      }
-      
-      if (!response.data.maintenance_costs) {
-        console.log('No maintenance_costs property');
-        return false;
-      }
-      
-      if (!Array.isArray(response.data.maintenance_costs)) {
-        console.log('maintenance_costs is not an array');
-        return false;
-      }
-      
-      if (response.data.maintenance_costs.length === 0) {
-        console.log('maintenance_costs array is empty');
-        return false;
-      }
-      
-      console.log('Found maintenance costs:', response.data.maintenance_costs.length);
-      return true;
-    } catch (error) {
-      console.error('Error checking maintenance cost:', error);
-      return false;
     }
   };
 
@@ -510,13 +473,13 @@ export default function MaintenancePage() {
                                 
                                 if (!response.data || !response.data.maintenance_costs || response.data.maintenance_costs.length === 0) {
                                   console.log('🚫 BLOCKED: No cost details found');
-                                  toast.error('Please fill out cost details first. Click "Cost Details" button to record maintenance costs before marking as done.');
+                                  toast.error('Please fill out cost details first. Click &quot;Cost Details&quot; button to record maintenance costs before marking as done.');
                                   return;
                                 }
                                 
                                 // Check if any cost details were created AFTER the asset was put into maintenance
                                 const assetMaintenanceDate = new Date(asset.updated_at);
-                                const recentCosts = response.data.maintenance_costs.filter((cost: any) => {
+                                const recentCosts = response.data.maintenance_costs.filter((cost: { created_at: string }) => {
                                   const costDate = new Date(cost.created_at);
                                   const isRecent = costDate >= assetMaintenanceDate;
                                   console.log('🔍 DEBUG: Cost created_at:', cost.created_at, 'Asset updated_at:', asset.updated_at, 'Is recent:', isRecent);
@@ -527,7 +490,7 @@ export default function MaintenancePage() {
                                 
                                 if (recentCosts.length === 0) {
                                   console.log('🚫 BLOCKED: No recent cost details found (all costs are older than maintenance date)');
-                                  toast.error('Please add fresh cost details for this maintenance cycle. Click "Cost Details" button to record new maintenance costs.');
+                                  toast.error('Please add fresh cost details for this maintenance cycle. Click &quot;Cost Details&quot; button to record new maintenance costs.');
                                   return;
                                 }
                                 
@@ -536,7 +499,7 @@ export default function MaintenancePage() {
                               } catch (error) {
                                 console.log('🚫 BLOCKED: Error checking cost details:', error);
                                 console.log('🚫 DEBUG: Error details:', error);
-                                toast.error('Please fill out cost details first. Click "Cost Details" button to record maintenance costs before marking as done.');
+                                toast.error('Please fill out cost details first. Click &quot;Cost Details&quot; button to record maintenance costs before marking as done.');
                                 return;
                               }
                             }}
@@ -585,7 +548,7 @@ export default function MaintenancePage() {
                   {isEditing ? 'Edit Maintenance Cost' : 'Record Maintenance Cost'}
                 </h2>
                 <p className="text-gray-600 mb-6">
-                  Record the repair cost and details for <strong>{selectedAsset.name}</strong> at {selectedAsset.rental_unit.property.name} Unit {selectedAsset.rental_unit.unit_number}. After saving the cost, use the "Done" button to mark the asset as working.
+                  Record the repair cost and details for <strong>{selectedAsset.name}</strong> at {selectedAsset.rental_unit.property.name} Unit {selectedAsset.rental_unit.unit_number}. After saving the cost, use the &quot;Done&quot; button to mark the asset as working.
                 </p>
               </div>
 

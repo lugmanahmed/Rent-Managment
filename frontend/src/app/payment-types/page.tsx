@@ -88,16 +88,21 @@ export default function PaymentTypesPage() {
       setShowAddForm(false);
       setEditingPaymentType(null);
       fetchPaymentTypes();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error saving payment type:', error);
       
       // Show specific validation errors if available
-      if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        const errorMessages = Object.values(errors).flat();
-        toast.error('Validation failed: ' + errorMessages.join(', '));
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } };
+        if (axiosError.response?.data?.errors) {
+          const errors = axiosError.response.data.errors;
+          const errorMessages = Object.values(errors).flat();
+          toast.error('Validation failed: ' + errorMessages.join(', '));
+        } else {
+          toast.error('Failed to save payment type: ' + (axiosError.response?.data?.message || 'Unknown error'));
+        }
       } else {
-        toast.error('Failed to save payment type: ' + (error.response?.data?.message || error.message));
+        toast.error('Failed to save payment type: Unknown error');
       }
     }
   };

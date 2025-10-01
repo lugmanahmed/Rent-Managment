@@ -201,7 +201,7 @@ export default function EditTenantPage() {
     setFormData(prev => ({
       ...prev,
       [section]: {
-        ...prev[section as keyof typeof prev],
+        ...(prev[section as keyof typeof prev] as Record<string, unknown> || {}),
         [field]: value
       }
     }));

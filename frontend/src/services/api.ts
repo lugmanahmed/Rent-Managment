@@ -184,7 +184,7 @@ interface PaymentType {
   is_active: boolean;
   is_recurring: boolean;
   requires_approval: boolean;
-  settings?: any;
+  settings?: Record<string, unknown>;
 }
 
 interface PaymentMode {
@@ -194,7 +194,7 @@ interface PaymentMode {
   description?: string;
   is_active: boolean;
   requires_reference: boolean;
-  settings?: any;
+  settings?: Record<string, unknown>;
 }
 
 interface PaymentRecord {
@@ -506,7 +506,7 @@ export const maintenanceCostsAPI = {
       });
       
       console.log('🔍 API DEBUG: FormData entries:');
-      for (let [key, value] of formData.entries()) {
+      for (const [key, value] of formData.entries()) {
         console.log(`${key}:`, value);
       }
       
@@ -532,12 +532,12 @@ export const maintenanceCostsAPI = {
 export const rentInvoicesAPI = {
   getAll: (params?: Record<string, unknown>) => api.get('/rent-invoices', { params }),
   getById: (id: number) => api.get(`/rent-invoices/${id}`),
-  create: (data: any) => api.post('/rent-invoices', data),
-  update: (id: number, data: any) => api.put(`/rent-invoices/${id}`, data),
+  create: (data: Record<string, unknown>) => api.post('/rent-invoices', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/rent-invoices/${id}`, data),
   delete: (id: number) => api.delete(`/rent-invoices/${id}`),
   generateMonthly: (data: { month: number; year: number; due_date_offset?: number }) => 
     api.post('/rent-invoices/generate-monthly', data),
-  markAsPaid: (id: number, data?: any) => api.patch(`/rent-invoices/${id}/mark-paid`, data),
+  markAsPaid: (id: number, data?: Record<string, unknown>) => api.patch(`/rent-invoices/${id}/mark-paid`, data),
   getStatistics: () => api.get('/rent-invoices/statistics'),
 };
 

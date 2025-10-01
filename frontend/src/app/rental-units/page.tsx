@@ -28,8 +28,8 @@ interface RentalUnit {
   tenant_id?: number;
   move_in_date?: string;
   lease_end_date?: string;
-  amenities?: any[];
-  photos?: any[];
+  amenities?: Record<string, unknown>[];
+  photos?: Record<string, unknown>[];
   notes?: string;
   is_active: boolean;
   created_at: string;
@@ -151,7 +151,7 @@ export default function RentalUnitsPage() {
 
   const handleToggleStatus = async (id: number, currentStatus: boolean) => {
     try {
-      await rentalUnitsAPI.update(id, { is_active: !currentStatus });
+      await rentalUnitsAPI.update(id, { status: !currentStatus ? 'active' : 'inactive' });
       toast.success(`Rental unit ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
       fetchRentalUnits();
     } catch (error) {
@@ -350,19 +350,16 @@ export default function RentalUnitsPage() {
                             <div className="space-y-1">
                               {unit.assets.slice(0, 2).map((asset) => {
                                 console.log(`Asset ${asset.id} pivot:`, asset.pivot);
-                                console.log(`Asset ${asset.id} quantity:`, asset.pivot?.quantity);
                                 return (
                                   <div key={asset.id} className="flex items-center space-x-2">
                                     <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                                      asset.pivot?.status === 'working' 
+                                      asset.pivot?.is_active 
                                         ? 'bg-green-100 text-green-800' 
-                                        : asset.pivot?.status === 'maintenance'
-                                        ? 'bg-orange-100 text-orange-800'
-                                        : 'bg-red-100 text-red-800'
+                                        : 'bg-gray-100 text-gray-800'
                                     }`}>
-                                      {asset.name} (Qty: {asset.pivot?.quantity || 'N/A'})
-                                      {asset.pivot?.status === 'maintenance' && (
-                                        <span className="ml-1 text-orange-600">🔧</span>
+                                      {asset.name} (Qty: N/A)
+                                      {!asset.pivot?.is_active && (
+                                        <span className="ml-1 text-gray-600">🔧</span>
                                       )}
                                     </span>
                                   </div>
@@ -371,16 +368,16 @@ export default function RentalUnitsPage() {
                               {unit.assets.length > 2 && (
                                 <div className="text-xs text-gray-500">
                                   +{unit.assets.length - 2} more
-                                  {unit.assets.filter(a => a.pivot?.status === 'maintenance').length > 0 && (
+                                  {unit.assets.filter(a => !a.pivot?.is_active).length > 0 && (
                                     <span className="ml-1 text-orange-600">
-                                      ({unit.assets.filter(a => a.pivot?.status === 'maintenance').length} under maintenance)
+                                      ({unit.assets.filter(a => !a.pivot?.is_active).length} inactive)
                                     </span>
                                   )}
                                 </div>
                               )}
-                              {unit.assets.filter(a => a.pivot?.status === 'maintenance').length > 0 && unit.assets.length <= 2 && (
+                              {unit.assets.filter(a => !a.pivot?.is_active).length > 0 && unit.assets.length <= 2 && (
                                 <div className="text-xs text-orange-600 font-medium">
-                                  🔧 {unit.assets.filter(a => a.pivot?.status === 'maintenance').length} asset(s) under maintenance
+                                  🔧 {unit.assets.filter(a => !a.pivot?.is_active).length} asset(s) inactive
                                 </div>
                               )}
                             </div>

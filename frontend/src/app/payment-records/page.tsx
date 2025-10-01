@@ -136,16 +136,21 @@ export default function PaymentRecordsPage() {
       setShowAddForm(false);
       setEditingPaymentRecord(null);
       fetchPaymentRecords();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error saving payment record:', error);
       
       // Show specific validation errors if available
-      if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        const errorMessages = Object.values(errors).flat();
-        toast.error('Validation failed: ' + errorMessages.join(', '));
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } };
+        if (axiosError.response?.data?.errors) {
+          const errors = axiosError.response.data.errors;
+          const errorMessages = Object.values(errors).flat();
+          toast.error('Validation failed: ' + errorMessages.join(', '));
+        } else {
+          toast.error('Failed to save payment record: ' + (axiosError.response?.data?.message || 'Unknown error'));
+        }
       } else {
-        toast.error('Failed to save payment record: ' + (error.response?.data?.message || error.message));
+        toast.error('Failed to save payment record: Unknown error');
       }
     }
   };

@@ -25,7 +25,7 @@ interface RentInvoice {
   status: 'pending' | 'paid' | 'overdue' | 'cancelled';
   paid_date?: string;
   notes?: string;
-  payment_details?: any;
+  payment_details?: Record<string, unknown>;
   tenant: {
     personal_info: {
       firstName: string;
@@ -64,8 +64,8 @@ export default function RentInvoicesPage() {
   const [paymentMode, setPaymentMode] = useState('');
   const [referenceNumber, setReferenceNumber] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
-  const [paymentTypes, setPaymentTypes] = useState<any[]>([]);
-  const [paymentModes, setPaymentModes] = useState<any[]>([]);
+  const [paymentTypes, setPaymentTypes] = useState<Record<string, unknown>[]>([]);
+  const [paymentModes, setPaymentModes] = useState<Record<string, unknown>[]>([]);
 
   useEffect(() => {
     fetchInvoices();
@@ -75,7 +75,7 @@ export default function RentInvoicesPage() {
   const fetchInvoices = async () => {
     try {
       setLoading(true);
-      const params: any = {};
+      const params: Record<string, unknown> = {};
       if (statusFilter) params.status = statusFilter;
       if (monthFilter) params.month = parseInt(monthFilter);
       if (yearFilter) params.year = parseInt(yearFilter);
@@ -182,9 +182,12 @@ export default function RentInvoicesPage() {
         toast.error(`${response.data.errors.length} invoices could not be generated`);
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error generating invoices:', error);
-      toast.error(error.response?.data?.message || 'Failed to generate rent invoices');
+      const errorMessage = error && typeof error === 'object' && 'response' in error 
+        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message 
+        : 'Failed to generate rent invoices';
+      toast.error(errorMessage || 'Failed to generate rent invoices');
     } finally {
       setGenerating(false);
     }
@@ -630,9 +633,9 @@ export default function RentInvoicesPage() {
                       onChange={(e) => setPaymentType(e.target.value)}
                     >
                       <option value="">Select payment type</option>
-                      {paymentTypes.map((type) => (
-                        <option key={type.id} value={type.id}>
-                          {type.name}
+                      {paymentTypes.map((type, index) => (
+                        <option key={index} value={String(type.id)}>
+                          {String(type.name)}
                         </option>
                       ))}
                     </Select>
@@ -647,9 +650,9 @@ export default function RentInvoicesPage() {
                       onChange={(e) => setPaymentMode(e.target.value)}
                     >
                       <option value="">Select payment mode</option>
-                      {paymentModes.map((mode) => (
-                        <option key={mode.id} value={mode.id}>
-                          {mode.name}
+                      {paymentModes.map((mode, index) => (
+                        <option key={index} value={String(mode.id)}>
+                          {String(mode.name)}
                         </option>
                       ))}
                     </Select>

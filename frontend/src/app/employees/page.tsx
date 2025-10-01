@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../components/UI/Button';
 import { Input } from '../../components/UI/Input';
 import { Select } from '../../components/UI/Select';
-import { Textarea } from '../../components/UI/Textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '../../components/UI/Dialog';
 import { Users, Plus, Search, Edit, Trash2, Shield, Mail, Save, X } from 'lucide-react';
 import { usersAPI } from '../../services/api';
@@ -49,10 +48,16 @@ export default function EmployeePage() {
       const response = await usersAPI.getAll();
       console.log('Users API response:', response);
       setUsers(response.data.users || []);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error fetching users:', error);
-      console.error('Error details:', error.response?.data);
-      toast.error('Failed to fetch users: ' + (error.response?.data?.message || error.message));
+      if (error && typeof error === 'object' && 'response' in error) {
+        const errorResponse = error as { response?: { data?: { message?: string } } };
+        console.error('Error details:', errorResponse.response?.data);
+        const errorMessage = errorResponse.response?.data?.message || 'Unknown error';
+        toast.error('Failed to fetch users: ' + errorMessage);
+      } else {
+        toast.error('Failed to fetch users');
+      }
     } finally {
       setLoading(false);
     }
@@ -71,7 +76,7 @@ export default function EmployeePage() {
       await usersAPI.delete(id);
       toast.success('User deleted successfully');
       fetchUsers();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error deleting user:', error);
       toast.error('Failed to delete user');
     }
@@ -82,7 +87,7 @@ export default function EmployeePage() {
       await usersAPI.update(id, { is_active: !currentStatus });
       toast.success(`User ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
       fetchUsers();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error updating user status:', error);
       toast.error('Failed to update user status');
     }
@@ -118,7 +123,7 @@ export default function EmployeePage() {
       
       if (editingUser) {
         // Update existing user
-        const updateData: any = {
+        const updateData: Record<string, unknown> = {
           name: formData.name,
           email: formData.email,
           legacy_role: formData.legacy_role,
@@ -144,17 +149,23 @@ export default function EmployeePage() {
       setShowAddForm(false);
       setEditingUser(null);
       fetchUsers();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error saving user:', error);
-      console.error('Error details:', error.response?.data);
-      
-      // Show specific validation errors if available
-      if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        const errorMessages = Object.values(errors).flat();
-        toast.error('Validation failed: ' + errorMessages.join(', '));
+      if (error && typeof error === 'object' && 'response' in error) {
+        const errorResponse = error as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } };
+        console.error('Error details:', errorResponse.response?.data);
+        
+        // Show specific validation errors if available
+        if (errorResponse.response?.data?.errors) {
+          const errors = errorResponse.response.data.errors;
+          const errorMessages = Object.values(errors).flat();
+          toast.error('Validation failed: ' + errorMessages.join(', '));
+        } else {
+          const errorMessage = errorResponse.response?.data?.message || 'Unknown error';
+          toast.error('Failed to save user: ' + errorMessage);
+        }
       } else {
-        toast.error('Failed to save user: ' + (error.response?.data?.message || error.message));
+        toast.error('Failed to save user');
       }
     }
   };

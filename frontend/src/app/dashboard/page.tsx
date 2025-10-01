@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/UI/Card';
-import { Building2, Users, DollarSign, Wrench, RefreshCw } from 'lucide-react';
+import { Building2, Users, DollarSign, RefreshCw } from 'lucide-react';
 import { propertiesAPI, tenantsAPI, rentalUnitsAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import SidebarLayout from '../../components/Layout/SidebarLayout';
@@ -49,7 +49,7 @@ export default function DashboardPage() {
       setLoading(false);
       setError('Please log in to view dashboard data');
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, lastFetch, stats.totalProperties]);
 
   const fetchDashboardData = async () => {
     try {
@@ -68,8 +68,8 @@ export default function DashboardPage() {
       const rentalUnits = rentalUnitsRes.data.rental_units || [];
 
       // Calculate stats
-      const occupiedUnits = rentalUnits.filter((unit: any) => unit.is_occupied).length;
-      const availableUnits = rentalUnits.filter((unit: any) => !unit.is_occupied).length;
+      const occupiedUnits = rentalUnits.filter((unit: { is_occupied: boolean }) => unit.is_occupied).length;
+      const availableUnits = rentalUnits.filter((unit: { is_occupied: boolean }) => !unit.is_occupied).length;
       
       setStats({
         totalProperties: properties.length,

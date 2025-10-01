@@ -103,11 +103,11 @@ export default function EditRentalUnitPage() {
 
       // Set selected assets with quantities
       if (unit.assets && unit.assets.length > 0) {
-        setSelectedAssets(unit.assets.map((asset: any) => asset.id));
+        setSelectedAssets(unit.assets.map((asset: { id: number }) => asset.id));
         // Update asset quantities and status from the unit's assets
         setAssets(prevAssets => {
           return prevAssets.map(asset => {
-            const unitAsset = unit.assets.find((ua: any) => ua.id === asset.id);
+            const unitAsset = unit.assets.find((ua: { id: number; pivot?: { quantity?: number; status?: string } }) => ua.id === asset.id);
             return unitAsset ? { 
               ...asset, 
               quantity: unitAsset.pivot?.quantity || 1,
@@ -140,7 +140,7 @@ export default function EditRentalUnitPage() {
       // Preserve existing quantities and status if assets are already loaded
       setAssets(prevAssets => {
         if (prevAssets.length > 0) {
-          return fetchedAssets.map(asset => {
+          return fetchedAssets.map((asset: Record<string, unknown>) => {
             const existingAsset = prevAssets.find(pa => pa.id === asset.id);
             return existingAsset ? { 
               ...asset, 
@@ -190,7 +190,7 @@ export default function EditRentalUnitPage() {
           depositAmount: parseFloat(formData.financial.depositAmount),
           currency: formData.financial.currency
         },
-        tenant_id: formData.tenant_id ? parseInt(formData.tenant_id) : null
+        tenant_id: formData.tenant_id ? parseInt(formData.tenant_id) : undefined
       };
 
       console.log('Submitting rental unit data:', submitData);
@@ -205,7 +205,7 @@ export default function EditRentalUnitPage() {
             const asset = assets.find(a => a.id === assetId);
             console.log(`Asset ${assetId}:`, asset);
             return {
-              asset_id: parseInt(assetId),
+              asset_id: assetId,
               quantity: asset?.quantity || 1
             };
           });
@@ -215,10 +215,15 @@ export default function EditRentalUnitPage() {
           const addResponse = await rentalUnitsAPI.addAssets(parseInt(rentalUnitId), assetsWithQuantities);
           console.log('Add assets response:', addResponse.data);
           toast.success(`Rental unit updated successfully with ${selectedAssets.length} asset(s) assigned`);
-        } catch (assetError) {
+        } catch (assetError: unknown) {
           console.error('Error assigning assets:', assetError);
-          console.error('Asset error response:', assetError.response?.data);
-          toast.error('Failed to assign assets: ' + (assetError.response?.data?.message || assetError.message));
+          if (assetError && typeof assetError === 'object' && 'response' in assetError) {
+            const axiosError = assetError as { response?: { data?: { message?: string } } };
+            console.error('Asset error response:', axiosError.response?.data);
+            toast.error('Failed to assign assets: ' + (axiosError.response?.data?.message || 'Unknown error'));
+          } else {
+            toast.error('Failed to assign assets: Unknown error');
+          }
         }
       } else {
         toast.success('Rental unit updated successfully');
@@ -233,7 +238,7 @@ export default function EditRentalUnitPage() {
         try {
           for (const asset of statusUpdates) {
             const updateData: { status: string; maintenance_notes?: string; quantity?: number } = {
-              status: asset.status,
+              status: asset.status || 'working',
               quantity: asset.quantity || 1
             };
             
@@ -253,14 +258,19 @@ export default function EditRentalUnitPage() {
       
       // Navigate back to rental units list
       router.push('/rental-units');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating rental unit:', error);
 
-      if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        Object.values(errors).forEach((errMsgs: any) => {
-          errMsgs.forEach((msg: string) => toast.error(msg));
-        });
+      if (error && typeof error === 'object' && 'response' in error) {
+        const errorResponse = error as { response?: { data?: { errors?: Record<string, string[]> } } };
+        if (errorResponse.response?.data?.errors) {
+          const errors = errorResponse.response.data.errors;
+          Object.values(errors).forEach((errMsgs: string[]) => {
+            errMsgs.forEach((msg: string) => toast.error(msg));
+          });
+        } else {
+          toast.error('Failed to update rental unit');
+        }
       } else {
         toast.error('Failed to update rental unit');
       }

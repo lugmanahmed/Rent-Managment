@@ -1,8 +1,6 @@
 'use client';
 
 import React from 'react';
-import { X } from 'lucide-react';
-import { Button } from './Button';
 import { cn } from '../../utils/cn';
 
 interface DialogProps {

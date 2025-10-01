@@ -38,14 +38,14 @@ interface SidebarProps {
 
 interface NavigationGroup {
   name: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ className?: string }>;
   items: NavigationItem[];
 }
 
 interface NavigationItem {
   name: string;
   href: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ className?: string }>;
 }
 
 const navigationGroups: NavigationGroup[] = [
@@ -121,7 +121,7 @@ export default function SidebarLayout({ children }: SidebarProps) {
     });
     
     setExpandedGroups(newExpandedGroups);
-  }, [pathname]);
+  }, [pathname, expandedGroups]);
 
   const toggleGroup = (groupName: string) => {
     const newExpandedGroups = new Set(expandedGroups);

@@ -40,7 +40,7 @@ export default function PaymentModesPage() {
       setLoading(true);
       const response = await paymentModesAPI.getAll();
       setPaymentModes(response.data.payment_modes || []);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error fetching payment modes:', error);
       toast.error('Failed to fetch payment modes');
     } finally {
@@ -88,16 +88,22 @@ export default function PaymentModesPage() {
       setShowAddForm(false);
       setEditingPaymentMode(null);
       fetchPaymentModes();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error saving payment mode:', error);
       
       // Show specific validation errors if available
-      if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        const errorMessages = Object.values(errors).flat();
-        toast.error('Validation failed: ' + errorMessages.join(', '));
+      if (error && typeof error === 'object' && 'response' in error) {
+        const errorResponse = error as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } };
+        if (errorResponse.response?.data?.errors) {
+          const errors = errorResponse.response.data.errors;
+          const errorMessages = Object.values(errors).flat();
+          toast.error('Validation failed: ' + errorMessages.join(', '));
+        } else {
+          const errorMessage = errorResponse.response?.data?.message || 'Unknown error';
+          toast.error('Failed to save payment mode: ' + errorMessage);
+        }
       } else {
-        toast.error('Failed to save payment mode: ' + (error.response?.data?.message || error.message));
+        toast.error('Failed to save payment mode');
       }
     }
   };
@@ -119,7 +125,7 @@ export default function PaymentModesPage() {
       await paymentModesAPI.delete(id);
       toast.success('Payment mode deleted successfully');
       fetchPaymentModes();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error deleting payment mode:', error);
       toast.error('Failed to delete payment mode');
     }
