@@ -1,23 +1,22 @@
 {
   "name": "rent-management-system",
   "version": "1.0.0",
-  "description": "Full-stack rental property management system",
-  "main": "server/index.js",
+  "description": "Full-stack rental property management system with Next.js and Laravel",
   "scripts": {
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "server": "cd server && npm run dev",
-    "client": "cd client && npm start",
-    "build": "cd client && npm run build",
-    "install-all": "npm install && cd server && npm install && cd ../client && npm install",
-    "start": "cd server && npm start"
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "backend": "cd backend && \"C:\\xampp\\php\\php.exe\" artisan serve --host=127.0.0.1 --port=8000",
+    "frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "install-all": "cd frontend && npm install && cd ../backend && composer install",
+    "start": "npm run dev"
   },
   "keywords": [
     "rental",
     "property",
     "management",
-    "react",
-    "node",
-    "mongodb"
+    "nextjs",
+    "laravel",
+    "mysql"
   ],
   "author": "Your Name",
   "license": "MIT",
